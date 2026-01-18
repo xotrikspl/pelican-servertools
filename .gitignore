@@ -1,0 +1,28 @@
+# Ignore translation audit script
+_audit_translations.py
+
+# Ignore compiled Python files
+*.pyc
+__pycache__/
+
+# Ignore virtual environment directories
+venv/
+env/
+
+# Ignore dependency directories
+vendor/
+node_modules/
+
+# Ignore IDE specific files
+.vscode/
+.idea/
+
+# Ignore GitHub metadata
+.github/
+
+# Ignore OS specific files
+.DS_Store
+Thumbs.db
+
+# Ignore Pelican Files
+pelican/
