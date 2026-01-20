@@ -75,7 +75,8 @@ return [
             'translations' => 'Vertalingen',
             'translation_locale' => 'Taal',
             'translation_key' => 'Sleutel',
-            'translation_key_help' => 'Gebruik sleutels zoals common.section_basic of minecraft.motd_label.',
+            'translation_key_help' => 'Gebruik sleutels zoals minecraft.motd_label.',
+            'translation_key_prefix_note' => 'Het voorvoegsel servertools:: wordt automatisch toegevoegd.',
             'translation_value' => 'Waarde',
         ],
 
@@ -91,6 +92,7 @@ return [
             'options' => 'Opties',
             'min' => 'Min',
             'max' => 'Max',
+            'translation_key_prefix_note' => 'Het voorvoegsel servertools:: wordt automatisch toegevoegd.',
         ],
         
         'table' => [

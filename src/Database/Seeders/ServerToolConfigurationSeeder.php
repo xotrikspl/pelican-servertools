@@ -9,6 +9,7 @@ use Xotriks\Servertools\Models\ServerToolProfileTranslation;
 use Xotriks\Servertools\Models\ServerToolTranslationCategory;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class ServerToolConfigurationSeeder extends Seeder
 {
@@ -17,8 +18,10 @@ class ServerToolConfigurationSeeder extends Seeder
      */
     public function run(): void
     {
-		// Clear existing configurations before seeding
-        ServerToolConfiguration::query()->delete();
+		// Clear existing data before seeding (resets auto-increment)
+		DB::table('server_tool_profile_translations')->truncate();
+		DB::table('server_tool_translation_categories')->truncate();
+		DB::table('server_tool_configurations')->truncate();
 
 		$eggs = Egg::all();
 		$missingProfiles = [];
@@ -35,15 +38,16 @@ class ServerToolConfigurationSeeder extends Seeder
             $profileName = $this->findProfileByEggName($egg->name);
 			if (!$profileName || !isset($profiles[$profileName])) {
 				$missingProfiles[] = $egg->name;
-				Log::warning('ServerTools: missing profile mapping for egg.', [
-					'egg_id' => $egg->id,
-					'egg_name' => $egg->name,
-				]);
+				// Log::warning('ServerTools: missing profile mapping for egg.', [
+				// 	'egg_id' => $egg->id,
+				// 	'egg_name' => $egg->name,
+				// ]);
 				$this->command?->warn("⚠️  Missing profile for egg: {$egg->name}");
                 continue;
             }
 
 			$profileConfig = $this->normalizeProfileConfigOrder($profiles[$profileName]);
+			$profileConfig = $this->prefixTranslationKeysInConfig($profileConfig);
 
             $mapping = ServerToolConfiguration::updateOrCreate(
                 ['egg_id' => $egg->id],
@@ -223,6 +227,128 @@ class ServerToolConfigurationSeeder extends Seeder
 		}
 
 		return $config;
+	}
+
+	private function prefixTranslationKeysInConfig(array $config): array
+	{
+		$files = $config['files'] ?? null;
+		if (!is_array($files)) {
+			return $config;
+		}
+
+		foreach ($files as $filename => $fileConfig) {
+			if (!is_array($fileConfig)) {
+				continue;
+			}
+
+			$sections = $fileConfig['sections'] ?? null;
+			if (!is_array($sections)) {
+				continue;
+			}
+
+			$sectionsOrder = $fileConfig['sections_order'] ?? null;
+			if (is_array($sectionsOrder)) {
+				$config['files'][$filename]['sections_order'] = array_values(array_map(
+					fn ($key) => $this->prefixKey($key),
+					$sectionsOrder
+				));
+			}
+
+			if (isset($sections[0]) && is_array($sections[0]) && array_key_exists('section_key', $sections[0])) {
+				foreach ($sections as $index => $section) {
+					if (!is_array($section)) {
+						continue;
+					}
+
+					$sectionKey = $section['section_key'] ?? null;
+					if (is_string($sectionKey)) {
+						$config['files'][$filename]['sections'][$index]['section_key'] = $this->prefixKey($sectionKey);
+					}
+
+					$fields = $section['fields'] ?? null;
+					if (!is_array($fields)) {
+						continue;
+					}
+
+					foreach ($fields as $fieldIndex => $field) {
+						if (!is_array($field)) {
+							continue;
+						}
+
+						$label = $field['label'] ?? null;
+						if (is_string($label)) {
+							$config['files'][$filename]['sections'][$index]['fields'][$fieldIndex]['label'] = $this->prefixKey($label);
+						}
+
+						$options = $field['options'] ?? null;
+						if (is_array($options)) {
+							foreach ($options as $optionKey => $optionLabel) {
+								if (is_string($optionLabel)) {
+									$config['files'][$filename]['sections'][$index]['fields'][$fieldIndex]['options'][$optionKey] = $this->prefixKey($optionLabel);
+								}
+							}
+						}
+					}
+				}
+			} else {
+				$prefixedSections = [];
+				foreach ($sections as $sectionKey => $fields) {
+					$prefixedKey = $this->prefixKey($sectionKey);
+					if (!is_array($fields)) {
+						$prefixedSections[$prefixedKey] = $fields;
+						continue;
+					}
+
+					$prefixedFields = [];
+					foreach ($fields as $field) {
+						if (!is_array($field)) {
+							$prefixedFields[] = $field;
+							continue;
+						}
+
+						$label = $field['label'] ?? null;
+						if (is_string($label)) {
+							$field['label'] = $this->prefixKey($label);
+						}
+
+						$options = $field['options'] ?? null;
+						if (is_array($options)) {
+							foreach ($options as $optionKey => $optionLabel) {
+								if (is_string($optionLabel)) {
+									$options[$optionKey] = $this->prefixKey($optionLabel);
+								}
+							}
+							$field['options'] = $options;
+						}
+
+						$prefixedFields[] = $field;
+					}
+
+					$prefixedSections[$prefixedKey] = $prefixedFields;
+				}
+
+				$config['files'][$filename]['sections'] = $prefixedSections;
+			}
+		}
+
+		return $config;
+	}
+
+	private function prefixKey(mixed $key): mixed
+	{
+		if (!is_string($key)) {
+			return $key;
+		}
+
+		if (!str_contains($key, '.')) {
+			return $key;
+		}
+
+		if (str_starts_with($key, 'servertools::')) {
+			return $key;
+		}
+
+		return 'servertools::' . $key;
 	}
 
     /**
@@ -1702,11 +1828,6 @@ class ServerToolConfigurationSeeder extends Seeder
             return;
         }
 
-        ServerToolProfileTranslation::query()
-            ->where('translation_category_id', $categoryId)
-            ->where('key', 'like', 'minecraft.%')
-            ->delete();
-
         foreach ($this->minecraftTranslations() as $locale => $translations) {
             foreach ($translations as $key => $value) {
                 if (!is_string($key) || !is_string($value)) {
@@ -1717,7 +1838,7 @@ class ServerToolConfigurationSeeder extends Seeder
                     [
                         'translation_category_id' => $categoryId,
                         'locale' => $locale,
-                        'key' => 'minecraft.' . $key,
+						'key' => 'servertools::minecraft.' . $key,
                     ],
                     [
                         'value' => $value,

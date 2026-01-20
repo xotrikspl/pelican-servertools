@@ -5,6 +5,7 @@ return [
     'server_tools_label' => 'Narzędzia Serwera',
     'select_file_section' => 'Wybór konfiguracji pliku',
     'select_file_label' => 'Wybierz plik',
+    'select_file_placeholder' => 'Wybierz plik...',
     'save_changes' => 'Zapisz zmiany',
 
     // Notifications - Success

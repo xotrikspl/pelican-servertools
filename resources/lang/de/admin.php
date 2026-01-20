@@ -78,7 +78,8 @@ return [
             'translations' => 'Übersetzungen',
             'translation_locale' => 'Sprache',
             'translation_key' => 'Schlüssel',
-            'translation_key_help' => 'Schlüssel wie common.section_basic oder minecraft.motd_label.',
+            'translation_key_help' => 'Schlüssel wie minecraft.motd_label.',
+            'translation_key_prefix_note' => 'Das Präfix servertools:: wird automatisch hinzugefügt.',
             'translation_value' => 'Wert',
         ],
 
@@ -94,6 +95,7 @@ return [
             'options' => 'Optionen',
             'min' => 'Min',
             'max' => 'Max',
+            'translation_key_prefix_note' => 'Das Präfix servertools:: wird automatisch hinzugefügt.',
         ],
         
         'table' => [

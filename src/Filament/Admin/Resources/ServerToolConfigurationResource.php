@@ -21,11 +21,9 @@ use Filament\Actions\Action;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Arr;
 use App\Models\Egg;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema as DbSchema;
 use UnitEnum;
 use BackedEnum;
-use Xotriks\Servertools\Services\ServerToolTranslationService;
 use Xotriks\Servertools\Models\ServerToolTranslationCategory;
 
 class ServerToolConfigurationResource extends Resource
@@ -63,98 +61,7 @@ class ServerToolConfigurationResource extends Resource
 
     protected static function t(string $key): string
     {
-        return ServerToolTranslationService::translate($key);
-    }
-
-    protected static function translationKeySearchOptions(array $configBuilderState, string $search): array
-    {
-        $keys = self::translationKeysFromBuilder($configBuilderState);
-
-        $search = trim(mb_strtolower($search));
-        if ($search !== '') {
-            $keys = array_values(array_filter($keys, function (string $key) use ($search) {
-                return str_contains(mb_strtolower($key), $search);
-            }));
-        }
-
-        $keys = array_slice($keys, 0, 50);
-
-        return empty($keys) ? [] : array_combine($keys, $keys);
-    }
-
-    protected static function translationKeysFromBuilder(array $configBuilderState): array
-    {
-        $keys = [];
-
-        foreach ($configBuilderState as $file) {
-            if (!is_array($file)) {
-                continue;
-            }
-            $sections = $file['sections'] ?? [];
-            if (!is_array($sections)) {
-                continue;
-            }
-
-            foreach ($sections as $section) {
-                if (!is_array($section)) {
-                    continue;
-                }
-
-                $sectionKey = $section['section_key'] ?? null;
-                if (is_string($sectionKey) && str_contains($sectionKey, '.')) {
-                    $keys[] = $sectionKey;
-                }
-
-                $fields = $section['fields'] ?? [];
-                if (!is_array($fields)) {
-                    continue;
-                }
-
-                foreach ($fields as $field) {
-                    if (!is_array($field)) {
-                        continue;
-                    }
-
-                    $label = $field['label'] ?? null;
-                    if (is_string($label) && str_contains($label, '.')) {
-                        $keys[] = $label;
-                    }
-
-                    $options = $field['options'] ?? null;
-                    if (is_array($options)) {
-                        foreach ($options as $optionKey => $optionLabel) {
-                            if (is_string($optionKey) && str_contains($optionKey, '.')) {
-                                $keys[] = $optionKey;
-                            }
-                            if (is_string($optionLabel) && str_contains($optionLabel, '.')) {
-                                $keys[] = $optionLabel;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        $keys = array_values(array_unique($keys));
-        sort($keys);
-
-        return $keys;
-    }
-
-    protected static function localeOptions(): array
-    {
-        $langPath = plugin_path('servertools', 'resources/lang');
-        if (!is_dir($langPath)) {
-            return ['en' => 'en'];
-        }
-
-        $locales = collect(File::directories($langPath))
-            ->map(fn (string $dir) => basename($dir))
-            ->sort()
-            ->values()
-            ->all();
-
-        return array_combine($locales, $locales);
+        return trans('servertools::' . $key);
     }
 
     public static function form(Schema $schema): Schema
@@ -279,6 +186,8 @@ class ServerToolConfigurationResource extends Resource
                                     ->schema([
                                         TextInput::make('section_key')
                                             ->label(self::t('admin.profiles.builder.section_key'))
+                                            ->helperText(self::t('admin.profiles.builder.translation_key_prefix_note'))
+                                            ->prefix('servertools::')
                                             ->required()
                                             ->maxLength(255),
 
@@ -300,15 +209,34 @@ class ServerToolConfigurationResource extends Resource
                                                         'toggle' => 'Toggle',
                                                         'select' => 'Select',
                                                     ])
-                                                    ->required(),
+                                                    ->required()
+                                                    ->live()
+                                                    ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                                        $set('options', $get('options'));
+                                                        $set('min', $get('min'));
+                                                        $set('max', $get('max'));
+                                                    }),
 
                                                 TextInput::make('key')
                                                     ->label(self::t('admin.profiles.builder.key'))
                                                     ->required()
-                                                    ->maxLength(255),
+                                                    ->maxLength(255)
+                                                    ->live(debounce: 200)
+                                                    ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                                        $label = $get('label');
+                                                        if (!empty($label)) {
+                                                            return;
+                                                        }
+
+                                                        if (is_string($state) && $state !== '') {
+                                                            $set('label', $state);
+                                                        }
+                                                    }),
 
                                                 TextInput::make('label')
                                                     ->label(self::t('admin.profiles.builder.label'))
+                                                    ->helperText(self::t('admin.profiles.builder.translation_key_prefix_note'))
+                                                    ->prefix('servertools::')
                                                     ->required()
                                                     ->maxLength(255),
 
@@ -386,15 +314,15 @@ class ServerToolConfigurationResource extends Resource
                         $mappedFields[] = [
                             'type' => $field['type'] ?? null,
                             'key' => $field['key'] ?? null,
-                            'label' => $field['label'] ?? null,
-                            'options' => $field['options'] ?? null,
+                            'label' => self::stripPrefixKey($field['label'] ?? null),
+                            'options' => self::stripPrefixOptions($field['options'] ?? null),
                             'min' => $field['min'] ?? null,
                             'max' => $field['max'] ?? null,
                         ];
                     }
 
                     $sections[] = [
-                        'section_key' => $sectionKey,
+                        'section_key' => self::stripPrefixKey($sectionKey),
                         'fields' => $mappedFields,
                     ];
                 }
@@ -418,15 +346,15 @@ class ServerToolConfigurationResource extends Resource
                             $mappedFields[] = [
                                 'type' => $field['type'] ?? null,
                                 'key' => $field['key'] ?? null,
-                                'label' => $field['label'] ?? null,
-                                'options' => $field['options'] ?? null,
+                                'label' => self::stripPrefixKey($field['label'] ?? null),
+                                'options' => self::stripPrefixOptions($field['options'] ?? null),
                                 'min' => $field['min'] ?? null,
                                 'max' => $field['max'] ?? null,
                             ];
                         }
 
                         $sections[] = [
-                            'section_key' => $sectionKey,
+                            'section_key' => self::stripPrefixKey($sectionKey),
                             'fields' => $mappedFields,
                         ];
                     }
@@ -447,15 +375,15 @@ class ServerToolConfigurationResource extends Resource
                             $mappedFields[] = [
                                 'type' => $field['type'] ?? null,
                                 'key' => $field['key'] ?? null,
-                                'label' => $field['label'] ?? null,
-                                'options' => $field['options'] ?? null,
+                                'label' => self::stripPrefixKey($field['label'] ?? null),
+                                'options' => self::stripPrefixOptions($field['options'] ?? null),
                                 'min' => $field['min'] ?? null,
                                 'max' => $field['max'] ?? null,
                             ];
                         }
 
                         $sections[] = [
-                            'section_key' => $sectionKey,
+                            'section_key' => self::stripPrefixKey($sectionKey),
                             'fields' => $mappedFields,
                         ];
                     }
@@ -473,15 +401,15 @@ class ServerToolConfigurationResource extends Resource
                         $mappedFields[] = [
                             'type' => $field['type'] ?? null,
                             'key' => $field['key'] ?? null,
-                            'label' => $field['label'] ?? null,
-                            'options' => $field['options'] ?? null,
+                                'label' => self::stripPrefixKey($field['label'] ?? null),
+                                'options' => self::stripPrefixOptions($field['options'] ?? null),
                             'min' => $field['min'] ?? null,
                             'max' => $field['max'] ?? null,
                         ];
                     }
 
                     $sections[] = [
-                        'section_key' => $sectionKey,
+                            'section_key' => self::stripPrefixKey($sectionKey),
                         'fields' => $mappedFields,
                     ];
                 }
@@ -530,6 +458,8 @@ class ServerToolConfigurationResource extends Resource
                     continue;
                 }
 
+                $sectionKey = self::prefixKey($sectionKey);
+
                 $fields = [];
                 $fieldsRaw = $section['fields'] ?? [];
                 if (!is_array($fieldsRaw)) {
@@ -541,7 +471,7 @@ class ServerToolConfigurationResource extends Resource
                         continue;
                     }
                     $fields[] = array_filter(
-                        Arr::only($field, ['type', 'key', 'label', 'options', 'min', 'max']),
+                        self::prefixTranslationKeysInField(Arr::only($field, ['type', 'key', 'label', 'options', 'min', 'max'])),
                         fn ($value) => !is_null($value) && $value !== ''
                     );
                 }
@@ -559,6 +489,60 @@ class ServerToolConfigurationResource extends Resource
         }
 
         return $config;
+    }
+
+    protected static function prefixTranslationKeysInField(array $field): array
+    {
+        if (isset($field['label']) && is_string($field['label'])) {
+            $field['label'] = self::prefixKey($field['label']);
+        }
+
+        if (isset($field['options']) && is_array($field['options'])) {
+            foreach ($field['options'] as $optionKey => $optionLabel) {
+                if (is_string($optionLabel)) {
+                    $field['options'][$optionKey] = self::prefixKey($optionLabel);
+                }
+            }
+        }
+
+        return $field;
+    }
+
+    protected static function prefixKey(string $key): string
+    {
+        if (str_starts_with($key, 'servertools::')) {
+            return $key;
+        }
+
+        return 'servertools::' . $key;
+    }
+
+    protected static function stripPrefixKey(mixed $key): mixed
+    {
+        if (!is_string($key)) {
+            return $key;
+        }
+
+        if (str_starts_with($key, 'servertools::')) {
+            return substr($key, strlen('servertools::'));
+        }
+
+        return $key;
+    }
+
+    protected static function stripPrefixOptions(mixed $options): mixed
+    {
+        if (!is_array($options)) {
+            return $options;
+        }
+
+        foreach ($options as $optionKey => $optionLabel) {
+            if (is_string($optionLabel)) {
+                $options[$optionKey] = self::stripPrefixKey($optionLabel);
+            }
+        }
+
+        return $options;
     }
 
     public static function ensureEggHasServerToolsFeature(?int $eggId): void

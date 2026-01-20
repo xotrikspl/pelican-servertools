@@ -78,7 +78,8 @@ return [
             'translations' => '번역',
             'translation_locale' => '언어',
             'translation_key' => '키',
-            'translation_key_help' => 'common.section_basic 또는 minecraft.motd_label 같은 키를 사용하세요.',
+            'translation_key_help' => 'minecraft.motd_label 같은 키를 사용하세요.',
+            'translation_key_prefix_note' => 'servertools:: 접두사는 자동으로 추가됩니다.',
             'translation_value' => '값',
         ],
 
@@ -94,6 +95,7 @@ return [
             'options' => '옵션',
             'min' => '최소',
             'max' => '최대',
+            'translation_key_prefix_note' => 'servertools:: 접두사는 자동으로 추가됩니다.',
         ],
         
         'table' => [

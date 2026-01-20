@@ -5,6 +5,7 @@ return [
     'server_tools_label' => 'サーバーツール',
     'select_file_section' => 'ファイル設定の選択',
     'select_file_label' => 'ファイルを選択',
+    'select_file_placeholder' => 'ファイルを選択...',
     'save_changes' => '変更を保存',
 
     // Notifications - Success

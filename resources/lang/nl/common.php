@@ -5,6 +5,7 @@ return [
     'server_tools_label' => 'Serverhulpmiddelen',
     'select_file_section' => 'Bestandsconfiguratie selecteren',
     'select_file_label' => 'Bestand selecteren',
+    'select_file_placeholder' => 'Selecteer een bestand...',
     'save_changes' => 'Wijzigingen opslaan',
 
     // Notifications - Success

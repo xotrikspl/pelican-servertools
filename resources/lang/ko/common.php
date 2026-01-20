@@ -5,6 +5,7 @@ return [
     'server_tools_label' => '서버 도구',
     'select_file_section' => '파일 구성 선택',
     'select_file_label' => '파일 선택',
+    'select_file_placeholder' => '파일 선택...',
     'save_changes' => '변경 사항 저장',
 
     // Notifications - Success

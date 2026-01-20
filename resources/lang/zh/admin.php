@@ -75,7 +75,8 @@ return [
             'translations' => '翻译',
             'translation_locale' => '语言',
             'translation_key' => '键',
-            'translation_key_help' => '使用如 common.section_basic 或 minecraft.motd_label 的键。',
+            'translation_key_help' => '使用如 minecraft.motd_label 的键。',
+            'translation_key_prefix_note' => 'servertools:: 前缀会自动添加。',
             'translation_value' => '值',
         ],
 
@@ -91,6 +92,7 @@ return [
             'options' => '选项',
             'min' => '最小',
             'max' => '最大',
+            'translation_key_prefix_note' => 'servertools:: 前缀会自动添加。',
         ],
         
         'table' => [

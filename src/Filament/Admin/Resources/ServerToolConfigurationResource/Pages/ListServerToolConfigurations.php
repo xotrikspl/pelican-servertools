@@ -5,7 +5,6 @@ namespace Xotriks\Servertools\Filament\Admin\Resources\ServerToolConfigurationRe
 use Xotriks\Servertools\Filament\Admin\Resources\ServerToolConfigurationResource;
 use Xotriks\Servertools\Models\ServerToolConfiguration;
 use Xotriks\Servertools\Models\ServerToolTranslationCategory;
-use Xotriks\Servertools\Services\ServerToolTranslationService;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Notifications\Notification;
@@ -24,10 +23,11 @@ class ListServerToolConfigurations extends ListRecords
     {
         return [
             \Filament\Actions\CreateAction::make()
-                ->label(ServerToolTranslationService::translate('admin.actions.create_profile')),
+                ->icon('tabler-plus')
+                ->label(trans('servertools::admin.actions.create_profile')),
 
             Action::make('export_profiles')
-                ->label(ServerToolTranslationService::translate('admin.actions.export_profiles'))
+                ->label(trans('servertools::admin.actions.export_profiles'))
                 ->icon('tabler-download')
                 ->action(function () {
                     $payload = $this->buildProfilesExportPayload();
@@ -40,11 +40,11 @@ class ListServerToolConfigurations extends ListRecords
                 }),
 
             Action::make('import_profiles')
-                ->label(ServerToolTranslationService::translate('admin.actions.import_profiles'))
+                ->label(trans('servertools::admin.actions.import_profiles'))
                 ->icon('tabler-upload')
                 ->form([
                     FileUpload::make('file')
-                        ->label(ServerToolTranslationService::translate('admin.import_export.file'))
+                        ->label(trans('servertools::admin.import_export.file'))
                         ->acceptedFileTypes(['application/json', 'text/json', 'text/plain'])
                         ->disk('local')
                         ->directory('servertools/imports')
@@ -54,7 +54,7 @@ class ListServerToolConfigurations extends ListRecords
                     $path = $data['file'] ?? null;
                     if (!$path || !Storage::disk('local')->exists($path)) {
                         Notification::make()
-                            ->title(ServerToolTranslationService::translate('admin.notifications.import_profiles_failed'))
+                            ->title(trans('servertools::admin.notifications.import_profiles_failed'))
                             ->danger()
                             ->send();
                         return;
@@ -66,7 +66,7 @@ class ListServerToolConfigurations extends ListRecords
                     $payload = json_decode($raw, true);
                     if (!is_array($payload) || !isset($payload['profiles']) || !is_array($payload['profiles'])) {
                         Notification::make()
-                            ->title(ServerToolTranslationService::translate('admin.notifications.import_invalid_json'))
+                            ->title(trans('servertools::admin.notifications.import_invalid_json'))
                             ->danger()
                             ->send();
                         return;
@@ -136,7 +136,7 @@ class ListServerToolConfigurations extends ListRecords
                     ]);
 
                     Notification::make()
-                        ->title(ServerToolTranslationService::translate('admin.notifications.import_profiles_success'))
+                        ->title(trans('servertools::admin.notifications.import_profiles_success'))
                         ->success()
                         ->send();
                 }),

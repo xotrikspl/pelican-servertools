@@ -16,7 +16,6 @@ use Filament\Notifications\Notification;
 use Filament\Actions\Action;
 use Illuminate\Support\Arr;
 use Xotriks\Servertools\Models\ServerToolConfiguration;
-use Xotriks\Servertools\Models\ServerToolConfig;
 use Xotriks\Servertools\Services\ServerToolAccessService;
 use Xotriks\Servertools\Services\ServerToolTranslationService;
 
@@ -34,7 +33,7 @@ final class ServerToolsPage extends ServerFormPage
 
     public static function getNavigationLabel(): string
     {
-        return ServerToolTranslationService::translate('common.server_tools_label');
+        return trans('servertools::common.server_tools_label');
     }
 
     public static function canAccess(): bool
@@ -65,14 +64,14 @@ final class ServerToolsPage extends ServerFormPage
 
     public function getHeading(): ?string
     {
-        return ServerToolTranslationService::translate('common.server_tools_label');
+        return trans('servertools::common.server_tools_label');
     }
 
     protected function getHeaderActions(): array
     {
         return [
             Action::make('save')
-                ->label(ServerToolTranslationService::translate('common.save_changes'))
+                ->label(trans('servertools::common.save_changes'))
                 ->color('primary')
                 ->icon('tabler-device-floppy')
                 ->action('save')
@@ -101,22 +100,24 @@ final class ServerToolsPage extends ServerFormPage
             return;
         }
 
-        // Load the first file by default
-        $this->selectedFile = array_key_first($this->profile['files']);
+        $this->selectedFile = null;
 
         // Initialize Filament first
         parent::mount();
 
-        // Then load data and populate the form
-        $this->loadFileData($this->selectedFile);
-
         \Log::debug('[ServerTools] mount: finished, data count=' . count($this->data ?? []));
+    }
+
+    protected function shouldCacheForms(): bool
+    {
+        return false;
     }
 
     #[\Livewire\Attributes\On('updatedSelectedFile')]
     public function updatedSelectedFile(): void
     {
         if ($this->selectedFile) {
+            $this->data['selectedFile'] = $this->selectedFile;
             $this->loadFileData($this->selectedFile);
             // Reset the form so Filament reloads the data
             $this->resetFormExcept('selectedFile');
@@ -151,36 +152,24 @@ final class ServerToolsPage extends ServerFormPage
             $data = $parser::parseContent($content);
 
             $flatData = [];
-            foreach ($data as $key => $value) {
-                if (is_array($value)) {
-                    // If this is an associative array (section), prefix the keys
-                    if (array_keys($value) !== range(0, count($value) - 1)) {
-                        foreach ($value as $subKey => $subValue) {
-                            $subValue = $this->normalizeValue($subValue);
-                            // Keep the original keys with dashes
-                            $flatData["{$key}.{$subKey}"] = $subValue;
-                        }
-                    } else {
-                        // Indexed array — keep as a whole
-                        $flatData[$key] = $value;
-                    }
-                } else {
-                    $value = $this->normalizeValue($value);
-                    // Keep the original keys
-                    $flatData[$key] = $value;
-                }
-            }
-
-            // Convert boolean-like strings for toggles
             foreach ($this->getSectionsList($fileConfig) as $section) {
                 $fields = $section['fields'] ?? [];
                 foreach ($fields as $field) {
-                    // Use the original key
                     $key = $field['key'];
-                    if ($field['type'] === 'toggle' && isset($flatData[$key])) {
-                        $value = $flatData[$key];
-                        $flatData[$key] = in_array($value, [true, '1', 1, 'true'], true);
+                    $value = $this->extractValueFromData($data, $key);
+                    if (is_null($value)) {
+                        continue;
                     }
+
+                    if (!is_array($value)) {
+                        $value = $this->normalizeValue($value);
+                    }
+
+                    if ($field['type'] === 'toggle') {
+                        $value = $this->normalizeToggleValue($value);
+                    }
+
+                    $flatData[$key] = $value;
                 }
             }
 
@@ -197,7 +186,7 @@ final class ServerToolsPage extends ServerFormPage
             \Log::error('[ServerTools] File load failed: ' . $filename . ' - ' . $e->getMessage());
             Notification::make()
                 ->danger()
-                ->title(ServerToolTranslationService::translate('common.notification_error_title'))
+                ->title(trans('servertools::common.notification_error_title'))
                 ->body($e->getMessage())
                 ->send();
         }
@@ -232,21 +221,28 @@ final class ServerToolsPage extends ServerFormPage
             return [];
         }
 
+        $selectedFile = $this->data['selectedFile'] ?? $this->selectedFile;
+        if (is_string($selectedFile) && $selectedFile !== $this->selectedFile) {
+            $this->selectedFile = $selectedFile;
+        }
+
         $fileOptions = [];
         foreach ($this->profile['files'] as $filename => $config) {
             $fileOptions[$filename] = $filename . ' (' . strtoupper($config['type']) . ')';
         }
 
         $sections = [
-            Section::make(ServerToolTranslationService::translate('common.select_file_section'))
+            Section::make(trans('servertools::common.select_file_section'))
+                ->key('servertools-file-select-' . ($this->selectedFile ?? 'none'))
                 ->schema([
                     Select::make('selectedFile')
-                        ->label(ServerToolTranslationService::translate('common.select_file_label'))
+                        ->label(trans('servertools::common.select_file_label'))
                         ->options($fileOptions)
-                        ->default($this->selectedFile)
+                        ->placeholder(trans('servertools::common.select_file_placeholder'))
                         ->live()
                         ->afterStateUpdated(function ($state) {
                             $this->selectedFile = $state;
+                            $this->data['selectedFile'] = $state;
                             $this->updatedSelectedFile();
                         }),
                 ]),
@@ -276,6 +272,7 @@ final class ServerToolsPage extends ServerFormPage
 
             if (!empty($components)) {
                 $sections[] = Section::make($this->translateSection($sectionKey))
+                    ->key('servertools-section-' . ($this->selectedFile ?? 'none') . '-' . $sectionKey)
                     ->schema($components)
                     ->columns(2);
             }
@@ -360,6 +357,51 @@ final class ServerToolsPage extends ServerFormPage
         return $value;
     }
 
+    private function normalizeToggleValue(mixed $value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_int($value)) {
+            return $value === 1;
+        }
+
+        if (is_string($value)) {
+            $normalized = strtolower(trim($value));
+            if (in_array($normalized, ['1', 'true', 'yes', 'on'], true)) {
+                return true;
+            }
+            if (in_array($normalized, ['0', 'false', 'no', 'off'], true)) {
+                return false;
+            }
+        }
+
+        return (bool) $value;
+    }
+
+    private function extractValueFromData(array $data, string $key): mixed
+    {
+        if (str_contains($key, '.')) {
+            [$sectionName, $subKey] = explode('.', $key, 2);
+            if (isset($data[$sectionName]) && is_array($data[$sectionName])) {
+                return $data[$sectionName][$subKey] ?? null;
+            }
+        }
+
+        if (array_key_exists($key, $data) && !is_array($data[$key])) {
+            return $data[$key];
+        }
+
+        foreach ($data as $sectionData) {
+            if (is_array($sectionData) && array_key_exists($key, $sectionData)) {
+                return $sectionData[$key];
+            }
+        }
+
+        return null;
+    }
+
 
     private function getParser(string $type): string
     {
@@ -380,7 +422,7 @@ final class ServerToolsPage extends ServerFormPage
         if (!$this->server instanceof Server) {
             Notification::make()
                 ->danger()
-                ->title(ServerToolTranslationService::translate('common.notification_error_invalid_server'))
+                ->title(trans('servertools::common.notification_error_invalid_server'))
                 ->send();
             return;
         }
@@ -388,7 +430,7 @@ final class ServerToolsPage extends ServerFormPage
         if (!$this->selectedFile || !isset($this->profile['files'][$this->selectedFile])) {
             Notification::make()
                 ->danger()
-                ->title(ServerToolTranslationService::translate('common.notification_error_no_profile'))
+                ->title(trans('servertools::common.notification_error_no_profile'))
                 ->send();
             return;
         }
@@ -401,6 +443,7 @@ final class ServerToolsPage extends ServerFormPage
             $repo = app(DaemonFileRepository::class)->setServer($this->server);
             $content = $repo->getContent($this->selectedFile);
             $parser = $this->getParser($fileConfig['type']);
+            $preserveBool = in_array($fileConfig['type'], ['yaml', 'json'], true);
 
             // Parse the current file
             $data = $parser::parseContent($content);
@@ -428,7 +471,7 @@ final class ServerToolsPage extends ServerFormPage
                 foreach ($formData as $key => $value) {
                     if (isset($data[$key])) {
                         // Convert booleans for toggles
-                        if ($this->isToggleField($fileConfig, $key) && is_bool($value)) {
+                        if ($this->isToggleField($fileConfig, $key) && is_bool($value) && !$preserveBool) {
                             $value = $value ? 'true' : 'false';
                         }
                         $data[$key] = $value;
@@ -443,7 +486,7 @@ final class ServerToolsPage extends ServerFormPage
                             $value = $formData[$key];
                             
                             // Convert booleans for toggles
-                            if ($field['type'] === 'toggle' && is_bool($value)) {
+                            if ($field['type'] === 'toggle' && is_bool($value) && !$preserveBool) {
                                 $value = $value ? 'true' : 'false';
                             }
 
@@ -495,8 +538,8 @@ final class ServerToolsPage extends ServerFormPage
 
             Notification::make()
                 ->success()
-                ->title(ServerToolTranslationService::translate('common.notification_success_title'))
-                ->body(ServerToolTranslationService::translate('common.notification_success_message'))
+                ->title(trans('servertools::common.notification_success_title'))
+                ->body(trans('servertools::common.notification_success_message'))
                 ->send();
 
             // Reload data
@@ -506,7 +549,7 @@ final class ServerToolsPage extends ServerFormPage
             
             Notification::make()
                 ->danger()
-                ->title(ServerToolTranslationService::translate('common.notification_error_title'))
+                ->title(trans('servertools::common.notification_error_title'))
                 ->body($e->getMessage())
                 ->send();
         }

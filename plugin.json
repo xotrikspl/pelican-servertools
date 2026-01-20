@@ -1,11 +1,11 @@
 {
     "id": "servertools",
     "name": "Server Tools",
-    "author": "xotriks",
+    "author": "xotriks_",
     "version": "1.0.0",
     "description": "Admin and server panel configuration editor with profiles, translations, and file parsers for game servers.",
     "category": "plugin",
-    "url": "https://github.com/xotriks/pelican-servertools",
+    "url": "https://github.com/xotrikspl/pelican-servertools",
     "update_url": null,
     "namespace": "Xotriks\\Servertools",
     "class": "ServerToolsPlugin",

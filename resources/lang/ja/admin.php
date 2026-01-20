@@ -78,8 +78,9 @@ return [
             'translations' => '翻訳',
             'translation_locale' => '言語',
             'translation_key' => 'キー',
-            'translation_key_help' => 'common.section_basic や minecraft.motd_label のようなキーを使用してください。',
+            'translation_key_help' => 'minecraft.motd_label のようなキーを使用してください。',
             'translation_value' => '値',
+            'translation_key_prefix_note' => 'servertools:: プレフィックスは自動的に追加されます。',
         ],
 
         'builder' => [
@@ -94,6 +95,7 @@ return [
             'options' => 'オプション',
             'min' => '最小',
             'max' => '最大',
+            'translation_key_prefix_note' => 'servertools:: プレフィックスは自動的に追加されます。',
         ],
         
         'table' => [

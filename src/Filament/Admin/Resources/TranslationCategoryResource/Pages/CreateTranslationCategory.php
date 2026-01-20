@@ -2,9 +2,9 @@
 
 namespace Xotriks\Servertools\Filament\Admin\Resources\TranslationCategoryResource\Pages;
 
+use Filament\Actions\Action;
 use Filament\Resources\Pages\CreateRecord;
 use Xotriks\Servertools\Filament\Admin\Resources\TranslationCategoryResource;
-use Xotriks\Servertools\Services\ServerToolTranslationService;
 
 class CreateTranslationCategory extends CreateRecord
 {
@@ -12,21 +12,31 @@ class CreateTranslationCategory extends CreateRecord
 
     public function getTitle(): string
     {
-        return ServerToolTranslationService::translate('admin.pages.create_translation_category');
+        return trans('servertools::admin.pages.create_translation_category');
     }
 
     public function getHeading(): string
     {
-        return ServerToolTranslationService::translate('admin.pages.create_translation_category');
+        return trans('servertools::admin.pages.create_translation_category');
     }
 
     protected function getFormActions(): array
     {
+        return [];
+    }
+
+    protected function getHeaderActions(): array
+    {
         return [
-            $this->getCreateFormAction()
-                ->label(ServerToolTranslationService::translate('admin.actions.save_changes')),
-            $this->getCancelFormAction()
-                ->label(ServerToolTranslationService::translate('admin.actions.cancel')),
+            Action::make('save')
+                ->label(trans('servertools::admin.actions.save_changes'))
+                ->color('primary')
+                ->action('create')
+                ->keyBindings(['mod+s']),
+            Action::make('cancel')
+                ->label(trans('servertools::admin.actions.cancel'))
+                ->color('gray')
+                ->url($this->getResource()::getUrl('index')),
         ];
     }
 

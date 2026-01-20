@@ -2,7 +2,7 @@
 
 namespace Xotriks\Servertools\Services;
 
-use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Lang;
 use Xotriks\Servertools\Models\ServerToolProfileTranslation;
 use Xotriks\Servertools\Models\ServerToolConfiguration;
 
@@ -18,6 +18,7 @@ class ServerToolTranslationService
         }
 
         $normalizedKey = self::normalizeKey($key);
+        $prefixedKey = self::namespaceKey($normalizedKey);
         [$namespace, $path] = self::splitKey($normalizedKey);
 
         $locale = $locale ?? app()->getLocale();
@@ -29,23 +30,23 @@ class ServerToolTranslationService
         if ($profileId && $namespace !== 'common') {
             $categoryId = self::getCategoryIdForProfile($profileId);
             if ($categoryId) {
-                $value = self::getFromCategory($categoryId, $shortLocale, $normalizedKey);
+                $value = self::getFromCategory($categoryId, $shortLocale, $prefixedKey);
             } else {
                 $value = null;
             }
         } else {
-            $value = self::getFromFile($shortLocale, $namespace, $path);
+            $value = self::getFromFile($shortLocale, $normalizedKey);
         }
         if ($value === null && $fallbackShort !== $shortLocale) {
             if ($profileId && $namespace !== 'common') {
                 $categoryId = self::getCategoryIdForProfile($profileId);
                 if ($categoryId) {
-                    $value = self::getFromCategory($categoryId, $fallbackShort, $normalizedKey);
+                    $value = self::getFromCategory($categoryId, $fallbackShort, $prefixedKey);
                 } else {
                     $value = null;
                 }
             } else {
-                $value = self::getFromFile($fallbackShort, $namespace, $path);
+                $value = self::getFromFile($fallbackShort, $normalizedKey);
             }
         }
 
@@ -59,6 +60,15 @@ class ServerToolTranslationService
         }
 
         return $key;
+    }
+
+    protected static function namespaceKey(string $key): string
+    {
+        if (str_starts_with($key, 'servertools::')) {
+            return $key;
+        }
+
+        return 'servertools::' . $key;
     }
 
     protected static function splitKey(string $key): array
@@ -77,24 +87,16 @@ class ServerToolTranslationService
         return explode('-', $normalized)[0] ?? $normalized;
     }
 
-    protected static function getFromFile(string $locale, string $namespace, string $path): mixed
+    protected static function getFromFile(string $locale, string $key): mixed
     {
-        if ($path === '') {
+        if ($key === '') {
             return null;
         }
 
-        $cacheKey = $locale . '|' . $namespace;
-        if (!array_key_exists($cacheKey, self::$cache)) {
-            $filePath = plugin_path('servertools') . "/resources/lang/{$locale}/{$namespace}.php";
-            if (is_file($filePath)) {
-                $translations = include $filePath;
-                self::$cache[$cacheKey] = is_array($translations) ? $translations : [];
-            } else {
-                self::$cache[$cacheKey] = [];
-            }
-        }
+        $namespaced = self::namespaceKey($key);
+        $value = Lang::get($namespaced, [], $locale);
 
-        return Arr::get(self::$cache[$cacheKey], $path);
+        return $value === $namespaced ? null : $value;
     }
 
     protected static function getFromCategory(?int $categoryId, string $locale, string $key): mixed
@@ -194,10 +196,11 @@ class ServerToolTranslationService
 
         $shortLocale = self::normalizeLocale($locale);
         $normalizedKey = self::normalizeKey($key);
+        $prefixedKey = self::namespaceKey($normalizedKey);
 
         $categoryId = self::getCategoryIdForProfile($profileId);
         if ($categoryId) {
-            $value = self::getFromCategory($categoryId, $shortLocale, $normalizedKey);
+            $value = self::getFromCategory($categoryId, $shortLocale, $prefixedKey);
         }
 
         return is_string($value) ? $value : null;

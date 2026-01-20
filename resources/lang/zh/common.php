@@ -5,6 +5,7 @@ return [
     'server_tools_label' => '服务器工具',
     'select_file_section' => '文件配置选择',
     'select_file_label' => '选择文件',
+    'select_file_placeholder' => '选择文件...',
     'save_changes' => '保存更改',
 
     // Notifications - Success

@@ -75,7 +75,8 @@ return [
             'translations' => 'Переводы',
             'translation_locale' => 'Язык',
             'translation_key' => 'Ключ',
-            'translation_key_help' => 'Используйте ключи типа common.section_basic или minecraft.motd_label.',
+            'translation_key_help' => 'Используйте ключи типа minecraft.motd_label.',
+            'translation_key_prefix_note' => 'Префикс servertools:: добавляется автоматически.',
             'translation_value' => 'Значение',
         ],
 
@@ -91,6 +92,7 @@ return [
             'options' => 'Опции',
             'min' => 'Мин',
             'max' => 'Макс',
+            'translation_key_prefix_note' => 'Префикс servertools:: добавляется автоматически.',
         ],
         
         'table' => [

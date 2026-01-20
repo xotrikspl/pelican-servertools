@@ -13,7 +13,6 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Grid;
 use Illuminate\Support\Str;
 use Xotriks\Servertools\Models\ServerToolTranslationCategory;
-use Xotriks\Servertools\Services\ServerToolTranslationService;
 
 class TranslationCategoryResource extends Resource
 {
@@ -25,22 +24,22 @@ class TranslationCategoryResource extends Resource
 
     public static function getNavigationGroup(): string
     {
-        return ServerToolTranslationService::translate('admin.server_tools_group');
+        return trans('servertools::admin.server_tools_group');
     }
 
     public static function getNavigationLabel(): string
     {
-        return ServerToolTranslationService::translate('admin.translation_categories.plural');
+        return trans('servertools::admin.translation_categories.plural');
     }
 
     public static function getLabel(): string
     {
-        return ServerToolTranslationService::translate('admin.translation_categories.label');
+        return trans('servertools::admin.translation_categories.label');
     }
 
     public static function getPluralLabel(): string
     {
-        return ServerToolTranslationService::translate('admin.translation_categories.plural');
+        return trans('servertools::admin.translation_categories.plural');
     }
 
     public static function form(Schema $schema): Schema
@@ -49,11 +48,11 @@ class TranslationCategoryResource extends Resource
             Grid::make(2)
                 ->columnSpanFull()
                 ->schema([
-                    Section::make(ServerToolTranslationService::translate('admin.translation_categories.form.section_basic'))
+                    Section::make(trans('servertools::admin.translation_categories.form.section_basic'))
                         ->columnSpan(1)
                         ->schema([
                             TextInput::make('name')
-                                ->label(ServerToolTranslationService::translate('admin.translation_categories.form.name'))
+                                ->label(trans('servertools::admin.translation_categories.form.name'))
                                 ->required()
                                 ->maxLength(255)
                                 ->live(onBlur: true)
@@ -62,7 +61,7 @@ class TranslationCategoryResource extends Resource
                                 }),
 
                             TextInput::make('slug')
-                                ->label(ServerToolTranslationService::translate('admin.translation_categories.form.slug'))
+                                ->label(trans('servertools::admin.translation_categories.form.slug'))
                                 ->required()
                                 ->maxLength(255),
                         ]),
@@ -76,25 +75,25 @@ class TranslationCategoryResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('name')
-                    ->label(ServerToolTranslationService::translate('admin.translation_categories.table.name'))
+                    ->label(trans('servertools::admin.translation_categories.table.name'))
                     ->searchable()
                     ->sortable(),
 
                 TextColumn::make('slug')
-                    ->label(ServerToolTranslationService::translate('admin.translation_categories.table.slug'))
+                    ->label(trans('servertools::admin.translation_categories.table.slug'))
                     ->searchable()
                     ->sortable(),
 
                 TextColumn::make('created_at')
-                    ->label(ServerToolTranslationService::translate('admin.translation_categories.table.created'))
+                    ->label(trans('servertools::admin.translation_categories.table.created'))
                     ->dateTime()
                     ->sortable(),
             ])
             ->actions([
                 EditAction::make()
-                    ->label(ServerToolTranslationService::translate('admin.actions.edit')),
+                    ->label(trans('servertools::admin.actions.edit')),
                 DeleteAction::make()
-                    ->label(ServerToolTranslationService::translate('admin.actions.delete'))
+                    ->label(trans('servertools::admin.actions.delete'))
                     ->after(function (ServerToolTranslationCategory $record): void {
                         \Log::debug('[ServerTools] translation category deleted', [
                             'category_id' => $record->id,

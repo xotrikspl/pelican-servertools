@@ -35,7 +35,6 @@ class ServertoolsPluginProvider extends ServiceProvider
         // Register Artisan commands
         if ($this->app->runningInConsole()) {
             $this->commands([
-                \Xotriks\Servertools\Commands\MigratePluginCommand::class,
                 \Xotriks\Servertools\Commands\SeedServerToolConfigurationsCommand::class,
             ]);
         }

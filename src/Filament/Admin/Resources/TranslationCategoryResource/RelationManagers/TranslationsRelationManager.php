@@ -10,7 +10,6 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Xotriks\Servertools\Models\ServerToolProfileTranslation;
-use Xotriks\Servertools\Services\ServerToolTranslationService;
 
 class TranslationsRelationManager extends RelationManager
 {
@@ -69,6 +68,9 @@ class TranslationsRelationManager extends RelationManager
                     ->icon('tabler-plus')
                     ->form($this->getTranslationFormComponents())
                     ->action(function (array $data) {
+                        if (isset($data['key']) && is_string($data['key'])) {
+                            $data['key'] = $this->prefixKey($data['key']);
+                        }
                         $translation = $this->getOwnerRecord()
                             ?->translations()
                             ->create($data);
@@ -90,11 +92,14 @@ class TranslationsRelationManager extends RelationManager
                     ->mountUsing(function ($form, $record) {
                         $form->fill([
                             'locale' => $record->locale,
-                            'key' => $record->key,
+                            'key' => $this->stripPrefixKey($record->key),
                             'value' => $record->value,
                         ]);
                     })
                     ->action(function ($record, array $data) {
+                        if (isset($data['key']) && is_string($data['key'])) {
+                            $data['key'] = $this->prefixKey($data['key']);
+                        }
                         $record->update($data);
                         \Log::debug('[ServerTools] translation updated', [
                             'translation_id' => $record->id,
@@ -132,9 +137,11 @@ class TranslationsRelationManager extends RelationManager
 
             TextInput::make('key')
                 ->label(self::t('admin.profiles.form.translation_key'))
-                ->helperText(self::t('admin.profiles.form.translation_key_help'))
+                ->helperText(self::t('admin.profiles.form.translation_key_help') . ' ' . trans('servertools::admin.profiles.form.translation_key_prefix_note'))
+                ->prefix('servertools::')
                 ->required()
-                ->maxLength(255),
+                ->maxLength(255)
+                ->dehydrateStateUsing(fn ($state) => $this->prefixKey($state)),
 
             Textarea::make('value')
                 ->label(self::t('admin.profiles.form.translation_value'))
@@ -180,6 +187,28 @@ class TranslationsRelationManager extends RelationManager
 
     protected static function t(string $key): string
     {
-        return ServerToolTranslationService::translate($key);
+        return trans('servertools::' . $key);
+    }
+
+    protected function prefixKey(string $key): string
+    {
+        if (str_starts_with($key, 'servertools::')) {
+            return $key;
+        }
+
+        return 'servertools::' . $key;
+    }
+
+    protected function stripPrefixKey(mixed $key): mixed
+    {
+        if (!is_string($key)) {
+            return $key;
+        }
+
+        if (str_starts_with($key, 'servertools::')) {
+            return substr($key, strlen('servertools::'));
+        }
+
+        return $key;
     }
 }

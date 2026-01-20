@@ -5,6 +5,7 @@ return [
     'server_tools_label' => 'Инструменты Сервера',
     'select_file_section' => 'Выбор конфигурации файла',
     'select_file_label' => 'Выберите файл',
+    'select_file_placeholder' => 'Выберите файл...',
     'save_changes' => 'Сохранить изменения',
 
     // Notifications - Success

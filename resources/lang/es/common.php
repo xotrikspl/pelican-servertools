@@ -5,6 +5,7 @@ return [
     'server_tools_label' => 'Herramientas del Servidor',
     'select_file_section' => 'Selección de configuración del archivo',
     'select_file_label' => 'Seleccionar archivo',
+    'select_file_placeholder' => 'Selecciona un archivo...',
     'save_changes' => 'Guardar cambios',
 
     // Notifications - Success

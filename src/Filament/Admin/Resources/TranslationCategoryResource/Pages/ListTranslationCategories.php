@@ -6,7 +6,6 @@ use Filament\Resources\Pages\ListRecords;
 use Xotriks\Servertools\Filament\Admin\Resources\TranslationCategoryResource;
 use Xotriks\Servertools\Models\ServerToolProfileTranslation;
 use Xotriks\Servertools\Models\ServerToolTranslationCategory;
-use Xotriks\Servertools\Services\ServerToolTranslationService;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Notifications\Notification;
@@ -23,10 +22,11 @@ class ListTranslationCategories extends ListRecords
     {
         return [
             \Filament\Actions\CreateAction::make()
-                ->label(ServerToolTranslationService::translate('admin.actions.create_translation_category')),
+                ->icon('tabler-plus')
+                ->label(trans('servertools::admin.actions.create_translation_category')),
 
             Action::make('export_translations')
-                ->label(ServerToolTranslationService::translate('admin.actions.export_translations'))
+                ->label(trans('servertools::admin.actions.export_translations'))
                 ->icon('tabler-download')
                 ->action(function () {
                     $payload = $this->buildTranslationsExportPayload();
@@ -39,11 +39,11 @@ class ListTranslationCategories extends ListRecords
                 }),
 
             Action::make('import_translations')
-                ->label(ServerToolTranslationService::translate('admin.actions.import_translations'))
+                ->label(trans('servertools::admin.actions.import_translations'))
                 ->icon('tabler-upload')
                 ->form([
                     FileUpload::make('file')
-                        ->label(ServerToolTranslationService::translate('admin.import_export.file'))
+                        ->label(trans('servertools::admin.import_export.file'))
                         ->acceptedFileTypes(['application/json', 'text/json', 'text/plain'])
                         ->disk('local')
                         ->directory('servertools/imports')
@@ -53,7 +53,7 @@ class ListTranslationCategories extends ListRecords
                     $path = $data['file'] ?? null;
                     if (!$path || !Storage::disk('local')->exists($path)) {
                         Notification::make()
-                            ->title(ServerToolTranslationService::translate('admin.notifications.import_translations_failed'))
+                            ->title(trans('servertools::admin.notifications.import_translations_failed'))
                             ->danger()
                             ->send();
                         return;
@@ -65,7 +65,7 @@ class ListTranslationCategories extends ListRecords
                     $payload = json_decode($raw, true);
                     if (!is_array($payload) || !isset($payload['categories']) || !is_array($payload['categories'])) {
                         Notification::make()
-                            ->title(ServerToolTranslationService::translate('admin.notifications.import_invalid_json'))
+                            ->title(trans('servertools::admin.notifications.import_invalid_json'))
                             ->danger()
                             ->send();
                         return;
@@ -140,7 +140,7 @@ class ListTranslationCategories extends ListRecords
                     ]);
 
                     Notification::make()
-                        ->title(ServerToolTranslationService::translate('admin.notifications.import_translations_success'))
+                        ->title(trans('servertools::admin.notifications.import_translations_success'))
                         ->success()
                         ->send();
                 }),
